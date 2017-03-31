@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+
+<launch>
+   <!-- declare arg to be passed in -->
+   <arg name="team_side" default="home" />
+   <arg name="ball_color" default="red" />
+   <arg name="ally1_color" default="purple" />
+
+
+   <group ns="christiauto_robaldo_$(arg team_side)">
+
+      <node name="tracker_ball" pkg="christiauto_robaldo" type="tracker" args="$(arg ball_color)" output="screen">
+      </node>
+
+      <node name="tracker_ally1" pkg="christiauto_robaldo" type="tracker" args="$(arg ally1_color)" output="screen">
+      </node>
+
+
+      <include file="$(find soccerref)/launch/referee.launch">
+         <arg name="half_duration_secs" value="120" />
+         <arg name="use_timer" value="false" />
+         <arg name="simulation_mode" value="false" />
+      </include>
+
+   </group>
+
+
+</launch>
+
