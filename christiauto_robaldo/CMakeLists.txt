@@ -166,10 +166,13 @@ add_executable( tracker src/tracker.cpp )
 target_link_libraries( tracker ${OpenCV_LIBS} )
 target_link_libraries( tracker ${catkin_LIBRARIES})
 
-
 add_executable( contours src/contours.cpp )
 target_link_libraries( contours ${OpenCV_LIBS} )
 target_link_libraries( contours ${catkin_LIBRARIES})
+
+add_executable( visionTester src/visionTester.cpp )
+target_link_libraries( visionTester ${OpenCV_LIBS} )
+target_link_libraries( visionTester ${catkin_LIBRARIES})
 
 add_executable( QuickDirtyAI src/QuickDirtyAI.cpp )
 target_link_libraries( QuickDirtyAI ${catkin_LIBRARIES} )

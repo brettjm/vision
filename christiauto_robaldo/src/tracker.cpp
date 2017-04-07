@@ -16,21 +16,14 @@
   //create global matrices so that they dont lost their values in between function callbacks
   Mat imgLines;
   
-
-  //global because the "greens" cant lost their values while blue is being tracked and vice versa
-  int blueMomentX = 0;
-  int blueMomentY = 0;
-  int greenMomentX = 0;
-  int greenMomentY = 0;
   int firsttime = 0;
 
   //create an object for each color you want to track
-  color_tracker red;
+  color_tracker pink;
   color_tracker yellow;
-  color_tracker green;
   color_tracker blue;
   color_tracker purple;
-  color_tracker orange;
+  color_tracker red;
 
 string colorToTrack;
 
@@ -42,65 +35,75 @@ string colorToTrack;
     }
     colorToTrack = string(argv[1]);
 
-    ros::init(argc, argv, colorToTrack + "tracker");
+    string nodeName;
+    if (colorToTrack == "pink") {
+        nodeName = "tracker_ball";
+    }
+    else if (colorToTrack == "yellow") {
+        nodeName = "tracker_ally1";
+    }
+    else if (colorToTrack == "blue") {
+        nodeName = "tracker_ally2";
+    }
+    else if (colorToTrack == "purple") {
+        nodeName = "tracker_ally1";
+    }
+    else if (colorToTrack == "red") {
+        nodeName = "tracker_ally2";
+    }
+    
+    ros::init(argc, argv, nodeName);
     ros::NodeHandle n;
 
     if (TEST) {
-      namedWindow("Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
+      namedWindow(colorToTrack + ": Control", CV_WINDOW_AUTOSIZE); //create a window called "Control"
   	  //Create trackbars in "Control" window
-  	  createTrackbar("LowH", "Control", &iLowH, 179); //Hue (0 - 179)
-  	  createTrackbar("HighH", "Control", &iHighH, 179);
+  	  createTrackbar("LowH", colorToTrack + ": Control", &iLowH, 179); //Hue (0 - 179)
+  	  createTrackbar("HighH", colorToTrack + ": Control", &iHighH, 179);
 
-  	  createTrackbar("LowS", "Control", &iLowS, 255); //Saturation (0 - 255)
-  	  createTrackbar("HighS", "Control", &iHighS, 255);
+  	  createTrackbar("LowS", colorToTrack + ": Control", &iLowS, 255); //Saturation (0 - 255)
+  	  createTrackbar("HighS", colorToTrack + ": Control", &iHighS, 255);
 
-  	  createTrackbar("LowV", "Control", &iLowV, 255);//Value (0 - 255)
-  	  createTrackbar("HighV", "Control", &iHighV, 255);
+  	  createTrackbar("LowV", colorToTrack + ": Control", &iLowV, 255);//Value (0 - 255)
+  	  createTrackbar("HighV", colorToTrack + ": Control", &iHighV, 255);
     }
 
     //initialize the "last" values until they receive info
-    red.iLastY = -1;
-    red.iLastX = -1;
+    pink.iLastY = -1;
+    pink.iLastX = -1;
     yellow.iLastY = -1;
     yellow.iLastX = -1;
-    green.iLastY = -1;
-    green.iLastX = -1;
     blue.iLastY = -1;
     blue.iLastX = -1;
     purple.iLastY = -1;
     purple.iLastX = -1;
-    orange.iLastY = -1;
-    orange.iLastX = -1;
+    red.iLastY = -1;
+    red.iLastX = -1;
 
     //initialize each color to its same color to be drawn as the tracking line
-    red.line_color = Scalar(0,0,255);
+    pink.line_color = Scalar(0,0,255);
     yellow.line_color = Scalar(0,120,120);
-    green.line_color = Scalar(0,255,0);
     blue.line_color = Scalar(255,0,0);
-    red.hue = "red";
+    pink.hue = "pink";
     yellow.hue = "yellow";
-    green.hue = "green";
     blue.hue = "blue";
     purple.hue = "purple";
-    orange.hue = "orange";
+    red.hue = "red";
 
-    if (colorToTrack == "red") {
-      red.chatter_pub = n.advertise<geometry_msgs::Pose2D>("red_chatter",100);//publisher is called chatter_pub
+    if (colorToTrack == "pink") {
+      pink.chatter_pub = n.advertise<geometry_msgs::Pose2D>("tracker_ball",100);//publisher is called chatter_pub
     }
     else if (colorToTrack == "yellow") {
       yellow.chatter_pub = n.advertise<geometry_msgs::Pose2D>("yellow_chatter",100);//publisher is called chatter_pub
     }
-    else if (colorToTrack == "green") {
-      green.chatter_pub = n.advertise<geometry_msgs::Pose2D>("green_chatter",100);//publisher is called chatter_pub
-    }
     else if (colorToTrack == "blue") {
-      blue.chatter_pub = n.advertise<geometry_msgs::Pose2D>("blue_chatter",100);//publisher is called chatter_pub
+      blue.chatter_pub = n.advertise<geometry_msgs::Pose2D>("tracker_ally2",100);//publisher is called chatter_pub
     }
     else if (colorToTrack == "purple") {
-      purple.chatter_pub = n.advertise<geometry_msgs::Pose2D>("purple_chatter",100);//publisher is called chatter_pub
+      purple.chatter_pub = n.advertise<geometry_msgs::Pose2D>("tracker_ally1",100);//publisher is called chatter_pub
     }
-    else if (colorToTrack == "orange") {
-      orange.chatter_pub = n.advertise<geometry_msgs::Pose2D>("orange_chatter",100);//publisher is called chatter_pub
+    else if (colorToTrack == "red") {
+      red.chatter_pub = n.advertise<geometry_msgs::Pose2D>("red_chatter",100);//publisher is called chatter_pub
     }
     else {
       cout << "COLOR SPELLED WRONG! COLOR NAME MUST BE ALL LOWER CASE!" << endl;
@@ -149,75 +152,64 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     
     //crop the image 
     imgOriginal = Mat(imgOriginal, Rect(smallestX, smallestY, largestX - smallestX, largestY - smallestY));
-    if (TEST) {
+    if (TEST >= 2) {
       imshow("original", imgOriginal);
     }
 
     //assign high and low values for thresholds
     //keep in this section because you want these values to change everytime callback function is called so that the 
     //threshold values stay current with how the sliders are changing
-    red.LowH = iLowH + 0; //121 15
-    red.HighH = iHighH + 0; //179 20
-    red.LowS = iLowS;
-    red.HighS = iHighS;
-    red.LowV = iLowV - 5; // 10
-    red.HighV = iHighV;
+    pink.LowH = iLowH + 0; //121 15
+    pink.HighH = iHighH + 0; //179 20
+    pink.LowS = iLowS;
+    pink.HighS = iHighS;
+    pink.LowV = iLowV; // 10
+    pink.HighV = iHighV;
 
     yellow.LowH = iLowH + 0;//0
-    yellow.HighH = iHighH + 139;//40
+    yellow.HighH = iHighH + 0;//5
     yellow.LowS = iLowS;
-    yellow.HighS = iHighS - 186;
-    yellow.LowV = iLowV - 16;//62
+    yellow.HighS = iHighS;
+    yellow.LowV = iLowV;//62
     yellow.HighV = iHighV;
-
-    green.LowH = iLowH + 55;//80
-    green.HighH = iHighH + 105;//100
-    green.LowS = iLowS;//46
-    green.HighS = iHighS - 120;
-    green.LowV = iLowV + 10;
-    green.HighV = iHighV;
    
-    blue.LowH = iLowH + 95;//95
-    blue.HighH = iHighH + 110;//110
+    blue.LowH = iLowH + 0;//97
+    blue.HighH = iHighH + 0;//115
     blue.LowS = iLowS;
     blue.HighS = iHighS;
     blue.LowV = iLowV;
     blue.HighV = iHighV;
 
-    purple.LowH = iLowH + 100;//100
-    purple.HighH = iHighH + 145;//120
+    purple.LowH = iLowH + 0;//100
+    purple.HighH = iHighH + 0;//120
     purple.LowS = iLowS;
     purple.HighS = iHighS;
     purple.LowV = iLowV;
     purple.HighV = iHighV;
 
-
-    orange.LowH = iLowH + 20;//100
-    orange.HighH = iHighH + 35;//120
-    orange.LowS = iLowS;
-    orange.HighS = iHighS;
-    orange.LowV = iLowV;
-    orange.HighV = iHighV;
+    red.LowH = iLowH + 0;//1
+    red.HighH = iHighH + 0;//24
+    red.LowS = iLowS;
+    red.HighS = iHighS;
+    red.LowV = iLowV;
+    red.HighV = iHighV;
 
 
  
     //BACKGROUND SUBRTRACTION===============================
-    //background_sub(imgOriginal);
+    background_sub(imgOriginal);
 
-    if (TEST) {
+    if (TEST >= 2) {
       imshow("After background_sub", imgOriginal);
     }
 
 
     //FIND INFO ON COLORS====================================
-    if (colorToTrack == "red") {
-      threshold(imgOriginal, red);
+    if (colorToTrack == "pink") {
+      threshold(imgOriginal, pink);
     }
     else if (colorToTrack == "yellow") {
       threshold(imgOriginal, yellow);
-    }
-    else if (colorToTrack == "green") {
-      threshold(imgOriginal, green);
     }
     else if (colorToTrack == "blue") {
       threshold(imgOriginal, blue);
@@ -225,8 +217,8 @@ void imageCallback(const sensor_msgs::ImageConstPtr& msg)
     else if (colorToTrack == "purple") {
       threshold(imgOriginal, purple);
     }
-    else if (colorToTrack == "orange") {
-      threshold(imgOriginal, orange);
+    else if (colorToTrack == "red") {
+      threshold(imgOriginal, red);
     }
 
     /*struct timespec spec;
@@ -250,13 +242,13 @@ void threshold(Mat imgOriginal, color_tracker& color)
 {
 
    Mat imgHSV;
-   cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captured frame from BGR to HSV
+   cvtColor(imgOriginal, imgHSV, COLOR_BGR2HSV); //Convert the captupink frame from BGR to HSV
 
    Mat imgThresholded;
    inRange(imgHSV, Scalar(color.LowH, color.LowS, color.LowV), Scalar(color.HighH, color.HighS, color.HighV), imgThresholded); //Threshold the image with values from trackbars and store in imgThresholded matrix
  
    int opening_size = 0;
-   if(color.hue == "red" || color.hue == "yellow")
+   if(color.hue == "pink")
    {
     opening_size = 7; //7 is barely smaller than the golf ball
    }
@@ -276,7 +268,7 @@ void threshold(Mat imgOriginal, color_tracker& color)
    Mat imgMasked;
    imgOriginal.copyTo(imgMasked, imgThresholded);//mask the black and white thresholded image with original to show color of object being tracked
 
-  if (TEST) {
+  if (TEST >= 2) {
     imshow("masked Image", imgMasked); //show the thresholded image
   }
    
@@ -325,11 +317,11 @@ void contour_pos(Mat imgThresholded, color_tracker& color)
 //ROS_INFO("%lf", dArea);
             
 
-            if(color.hue != "red" && (dArea < 100 || dArea > 500))//if the area is super big or super small you know you can ignore it
+            if(color.hue != "pink" && (dArea < 100 || dArea > 500))//if the area is super big or super small you know you can ignore it
             {
               continue;//you could also do filtering by the number of vertices if you want
             }
-            else if (color.hue == "red" && (dArea < 30 || dArea > 100)) {//nathan put this to 200 originally
+            else if (color.hue == "pink" && (dArea < 30 || dArea > 50)) {//nathan put this to 200 originally
               continue;
             }
             else if(dArea >= color.iLastArea)//save the appropraite X and Y and areas for either the big or small shape
@@ -350,7 +342,6 @@ void contour_pos(Mat imgThresholded, color_tracker& color)
               color.bigBlobX = color.iLastX;
               color.bigBlobY = color.iLastY;
             }
-
 
             drawContours( drawing, contours, i, 255, 1, 8, hierarchy, 0, Point() );
 
@@ -378,7 +369,7 @@ void contour_pos(Mat imgThresholded, color_tracker& color)
           pub_msg.theta = angle;
           color.chatter_pub.publish(pub_msg);//publish the msg that you built
       if (TEST) {  
-        imshow( "Contours", drawing );
+        imshow( color.hue + ": Contours", drawing );
       }
 
 }
@@ -386,7 +377,7 @@ void contour_pos(Mat imgThresholded, color_tracker& color)
 
 void background_sub(Mat& imgOriginal)
 {
-  //imwrite("background.png", imgOriginal );
+  //imwrite("field_background.png", imgOriginal );
   //cvtColor(imgOriginal, imgOriginal, CV_HSV2BGR);
 
   Mat imgBackground = imread("field_background.png");
@@ -400,7 +391,7 @@ void background_sub(Mat& imgOriginal)
   cvtColor( imgcolor, imgGRAY, COLOR_BGR2GRAY );
 
   Mat imgthresh;
-  threshold(imgGRAY, imgthresh, 45, 255, CV_THRESH_BINARY); 
+  threshold(imgGRAY, imgthresh, 10, 255, CV_THRESH_BINARY); 
 
   Mat imgMasked;
   imgOriginal.copyTo(imgMasked, imgthresh);
